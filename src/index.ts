@@ -6,7 +6,7 @@ import { registerTools } from "./tools/index.js";
 
 // Initialize the server
 export const server = new McpServer({
-    name: "the-historian",
+    name: "css-tutor",
     version: "0.0.1",
     capabilities: {
         prompts: {},
@@ -24,7 +24,7 @@ registerTools();
 async function main(): Promise<void> {
     const transport = new StdioServerTransport();
     await server.connect(transport);
-    console.log(`The Historian MCP Server is running`);
+    console.log(`CSS Tutor MCP Server is running`);
 }
 
 main().catch((error: Error) => {
