@@ -2,4 +2,9 @@
 node_modules
 build
 pnpm-lock.yaml
-data/
+
+
+# Ignore contents of data/, but not the directory itself
+data/*
+# Re-include the default memory file
+!data/memory.json
