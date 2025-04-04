@@ -1,8 +1,8 @@
 # Building a CSS Tutor MCP Server
 
-This repository contains a simple Model Context Protocol (MCP) server built with Node.js and TypeScript. It acts as a "CSS Tutor," providing personalized updates about CSS features to a connected AI client.
+This repo contains a simple Model Context Protocol (MCP) server built with Node.js and TypeScript. It acts as a "CSS Tutor," providing personalized updates about CSS features to a connected AI client.
 
-This server demonstrates key MCP concepts: defining **Resources**, **Tools**, and **Prompts**.
+This server demonstrates key MCP concepts: defining **Resources**, **Tools**, and **Prompts**. The goal of this demonstration is to help you move on from here and build much larger and more interesting agentic capabilities.
 
 ## Prerequisites
 
@@ -161,6 +161,10 @@ $env:OPENROUTER_API_KEY="sk-or-xxxxxxxxxx"; npx @modelcontextprotocol/inspector 
 
 Replace `sk-or-xxxxxxxxxx` with your actual key.
 
-## Conclusion
+## Wrapping up
 
-This guide demonstrates the core steps involved in creating a functional MCP server using the TypeScript SDK. We defined a resource to manage state, tools to perform actions (including interacting with an external API), and a prompt to guide the AI client. This provides a foundation for building more complex and capable MCP applications. 
+This demo demonstrates the core steps involved in creating a functional MCP server using the TypeScript SDK. We defined a resource to manage state, tools to perform actions (including interacting with an external API), and a prompt to guide the AI client.
+
+Hope this demo can help you understand how to build servers that are much more complex (and useful) than this one!
+
+(Also, if you run into any 🐛bugs, feel free to open up an issue.)
