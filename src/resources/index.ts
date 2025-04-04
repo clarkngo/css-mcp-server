@@ -83,7 +83,6 @@ function registerCssKnowledgeMemoryResource() {
             }
         }
     );
-    console.log(`Registered resource: ${resourceName} with base URI ${resourceUriBase}`);
 }
 
 // Main function to register all resources for this server

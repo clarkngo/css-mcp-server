@@ -97,8 +97,9 @@ function registerGetLatestUpdatesTool() {
                 model: "perplexity/sonar-pro", // Or whichever model you want to use
                 messages: [
                     { role: "system", content: "You are an AI assistant specialized in finding the latest CSS news and updates. Summarize the key recent developments." },
-                    { role: "user", content: "What are the most important recent updates or newly released features in CSS? Focus on things developers should be aware of in the last few months." }
-                ]
+                    { role: "user", content: "What are the most important recent updates or newly released features in CSS?" }
+                ],
+                search_recency_filter: "month" // Perplexity API parameter to filter results to most recent month
             });
 
             try {

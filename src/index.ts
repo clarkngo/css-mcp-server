@@ -24,7 +24,6 @@ registerTools();
 async function main(): Promise<void> {
     const transport = new StdioServerTransport();
     await server.connect(transport);
-    console.log(`CSS Tutor MCP Server is running`);
 }
 
 main().catch((error: Error) => {
