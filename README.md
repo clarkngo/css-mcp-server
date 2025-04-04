@@ -26,21 +26,14 @@ Follow these steps to get the server running quickly:
     npm install # Or: yarn install / pnpm install
     ```
 
-3.  **Configure API Key:** The `get_latest_updates` tool requires an OpenRouter API key. You have two main options:
-
-    *   **Option A (Using `.env` file):** Copy the example file and add your key. The server will load this when it starts.
-        ```bash
-        cp .env.example .env
-        # Now edit the .env file and add your OPENROUTER_API_KEY
-        ```
-    *   **Option B (Client Configuration):** Configure your MCP client to pass the API key as an environment variable when it launches the server. This is often preferred, especially if you run multiple servers or deploy elsewhere. (See client configuration example below).
+3.  **Prepare API Key:** The `get_latest_updates` tool requires an OpenRouter API key. Obtain your key from [OpenRouter](https://openrouter.ai/). You will provide this key to your MCP client in Step 5.
 
 4.  **Build the Server:** Compile the TypeScript code.
     ```bash
     npm run build # Or: yarn build / pnpm run build
     ```
 
-5.  **Configure Your MCP Client:** Tell your client how to launch the server. Here's an example for the Claude desktop app's `claude_desktop_config.json`:
+5.  **Configure Your MCP Client:** Tell your client how to launch the server *and* provide the API key as an environment variable. Here's an example for the Claude desktop app's `claude_desktop_config.json`:
 
     ```json
     {
@@ -51,16 +44,53 @@ Follow these steps to get the server running quickly:
             "/full/path/to/your/css-mcp-server/build/index.js" // Use the ABSOLUTE path
           ],
           "env": {
-            // Provide the API key here if using Option B above
-            "OPENROUTER_API_KEY": "sk-or-xxxxxxxxxxxxxxxxxxxxxxxxxx"
+            // The client MUST inject the environment variable for the server
+            "OPENROUTER_API_KEY": "sk-or-xxxxxxxxxxxxxxxxxxxxxxxxxx" // <-- Add your key here
           }
         }
       }
     }
     ```
-    *(Ensure the path in `args` is the correct **absolute path** to the built `index.js` file on your system.)*
+    *(Ensure the path in `args` is the correct **absolute path** to the built `index.js` file on your system. Replace the placeholder API key.)*
 
-6.  **Connect:** Start the connection from your MCP client. The client will launch the server process, and you can start interacting!
+6.  **Connect:** Start the connection from your MCP client. The client will launch the server process (with the API key in its environment), and you can start interacting!
+
+## Using with Cursor
+
+[Cursor](https://cursor.sh/) is an AI-first code editor that can act as an MCP client. Setting up this server with Cursor is straightforward, but requires an extra step for the guidance prompt.
+
+1.  **Configure Server in Cursor:**
+    *   Go to `Cursor Settings` > `MCP` > `Add new global MCP server`.
+    *   Paste in the same JSON as above in the Claude Desktop step, with all the same caveats.
+
+2.  **Create a Cursor Project Rule for the Prompt:** Cursor currently does not automatically use MCP prompts provided by servers. Instead, you need to provide the guidance using Cursor's [Project Rules](https://docs.cursor.com/context/rules-for-ai) feature.
+    *   Create the directory `.cursor/rules` in your project root if it doesn't exist.
+    *   Create a file inside it named `css-tutor.rule` (or any `.rule` filename).
+    *   Paste the following guidance text into `css-tutor.rule`:
+
+        ```text
+        You are a helpful assistant connecting to a CSS knowledge server. Your goal is to provide the user with personalized updates about new CSS features they haven't learned yet.
+
+        Available Tools:
+        1.  `get_latest_updates`: Fetches recent general news and articles about CSS. Use this first to see what's new.
+        2.  `read_from_memory`: Checks which CSS concepts the user already knows based on their stored knowledge profile.
+        3.  `write_to_memory`: Updates the user's knowledge profile. Use this when the user confirms they have learned or already know a specific CSS concept mentioned in an update.
+
+        Workflow:
+        1.  Call `get_latest_updates` to discover recent CSS developments.
+        2.  Call `read_from_memory` to get the user's current known concepts (if any).
+        3.  Compare the updates with the known concepts (if any). Identify 1-2 *new* concepts relevant to the user. **Important: They _must_ be from the response returned by `get_latest_updates` tool.**
+        4.  Present these new concepts to the user, adding any context as needed, in addition to the information returned by the `get_latest_updates`.
+        5.  Ask the user if they are familiar with these concepts or if they've learned them now.
+        6.  If the user confirms knowledge of a concept, call `write_to_memory` to update their profile for that specific concept.
+        7.  Focus on providing actionable, personalized learning updates.
+        ```
+
+3.  **Connect and Use:**
+    *   Ensure the `css-tutor` server is enabled in Cursor's MCP settings.
+    *   Start a new chat or code generation request (e.g., Cmd+K) and include `@css-tutor-rule` (or whatever you named your rule file) in your request. This tells Cursor to load the rule's content, which includes the instructions on how to use the `read_from_memory`, `write_to_memory`, and `get_latest_updates` tools provided by the connected MCP server. 
+
+Note that _without_ the prompt/rule, Cursor will still be able to use individual tools if you ask it to. The prompt provides a workflow and order in which to call the tools and read/write from memory.
 
 ## Understanding the Code
 
