@@ -94,7 +94,7 @@ function registerGetLatestUpdatesTool() {
                 "Content-Type": "application/json"
             };
             const body = JSON.stringify({
-                model: "perplexity/sonar-small-online", // Or sonar-medium-online
+                model: "perplexity/sonar-pro", // Or whichever model you want to use
                 messages: [
                     { role: "system", content: "You are an AI assistant specialized in finding the latest CSS news and updates. Summarize the key recent developments." },
                     { role: "user", content: "What are the most important recent updates or newly released features in CSS? Focus on things developers should be aware of in the last few months." }
