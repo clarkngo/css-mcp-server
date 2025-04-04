@@ -1,9 +1,6 @@
 import { server } from "../index.js";
-// Removed unused imports: fs, path, fileURLToPath
 
-// Removed __filename and __dirname derivation
-
-// Inlined prompt text using a regular string with explicit newlines and escaped backticks
+// Inlined prompt text for simplicity, but feel free to use a file if preferred
 const cssTutorPromptText = `
 You are a helpful assistant connecting to a CSS knowledge server. Your goal is to provide the user with personalized updates about new CSS features they haven\'t learned yet.\n
 \n
@@ -22,20 +19,19 @@ Workflow:\n
 7.  Focus on providing actionable, personalized learning updates.
 `
 
+// Registers the static guidance prompt with the MCP server.
 function registerCssTutorPrompt() {
-    // Removed file path construction and reading logic
-    // Removed try...catch block as file reading is no longer needed
     server.prompt(
         "css-tutor-guidance",
         "Provides guidance on how to use the CSS tutor tools and resources.",
-        {}, // No input schema needed for a static prompt
-        async () => ({ // Simple handler returning the static prompt content
+        {},
+        async () => ({
             messages: [
                 {
                     role: "assistant",
                     content: {
                         type: "text",
-                        text: cssTutorPromptText // Use the inlined text constant
+                        text: cssTutorPromptText
                     }
                 }
             ]
@@ -43,7 +39,7 @@ function registerCssTutorPrompt() {
     );
 }
 
+// Function called by src/index.ts to register all prompts for this server.
 export function registerPrompts() {
-    // registerHistorianStoryPrompt(); // Remove old prompt registration
-    registerCssTutorPrompt(); // Register the new CSS tutor prompt
+    registerCssTutorPrompt();
 }
