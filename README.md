@@ -1,6 +1,6 @@
 # Building a CSS Tutor MCP Server
 
-This repository contains a simple Model Context Protocol (MCP) server built with Node.js and TypeScript. It acts as a "CSS Tutor," providing personalized updates about CSS features to a connected AI client. This guide walks you through how it was built, step by step.
+This repository contains a simple Model Context Protocol (MCP) server built with Node.js and TypeScript. It acts as a "CSS Tutor," providing personalized updates about CSS features to a connected AI client.
 
 This server demonstrates key MCP concepts: defining **Resources**, **Tools**, and **Prompts**.
 
@@ -11,332 +11,95 @@ This server demonstrates key MCP concepts: defining **Resources**, **Tools**, an
 *   An AI client capable of connecting to an MCP server (e.g., the Claude desktop app)
 *   An [OpenRouter API Key](https://openrouter.ai/) (for fetching live CSS updates via Perplexity)
 
-## 1. Project Setup
+## Quick Start
 
-First, clone the repository and install the dependencies:
+Follow these steps to get the server running quickly:
 
-```bash
-git clone https://github.com/3mdistal/css-mcp-server.git
-cd css-mcp-server
-npm install # Or: yarn install / pnpm install
-```
+1.  **Clone the Repository:**
+    ```bash
+    git clone https://github.com/3mdistal/css-mcp-server.git
+    cd css-mcp-server
+    ```
 
-The key dependencies used are:
+2.  **Install Dependencies:**
+    ```bash
+    npm install # Or: yarn install / pnpm install
+    ```
 
-*   `@modelcontextprotocol/sdk`: The official TypeScript SDK for building MCP servers.
-*   `dotenv`: To load API keys from a `.env` file.
-*   `node-fetch`: To make HTTP requests to the OpenRouter API.
-*   `zod`: For data validation (schemas for resource data and tool inputs).
-*   `typescript`, `@types/node`, etc.: Standard TypeScript development tools.
+3.  **Configure API Key:** The `get_latest_updates` tool requires an OpenRouter API key. You have two main options:
 
-## 2. Understanding MCP Concepts
+    *   **Option A (Using `.env` file):** Copy the example file and add your key. The server will load this when it starts.
+        ```bash
+        cp .env.example .env
+        # Now edit the .env file and add your OPENROUTER_API_KEY
+        ```
+    *   **Option B (Client Configuration):** Configure your MCP client to pass the API key as an environment variable when it launches the server. This is often preferred, especially if you run multiple servers or deploy elsewhere. (See client configuration example below).
 
-Before diving into the code, let's briefly review the MCP components we'll build:
+4.  **Build the Server:** Compile the TypeScript code.
+    ```bash
+    npm run build # Or: yarn build / pnpm run build
+    ```
 
-*   **Resource:** Represents data or state that the server manages. Our server will have one resource: `css_knowledge_memory`, representing which CSS concepts the user knows.
-*   **Tool:** Represents an action the server can perform on behalf of the client AI. Our server will have three tools:
-    *   `get_latest_updates`: Fetches recent CSS news.
-    *   `read_from_memory`: Reads the user's knowledge state from the resource.
-    *   `write_to_memory`: Updates the user's knowledge state.
-*   **Prompt:** Provides guidance or instructions to the connected AI client on how to use the server's capabilities effectively. Our server will have one prompt: `css-tutor-guidance`.
+5.  **Configure Your MCP Client:** Tell your client how to launch the server. Here's an example for the Claude desktop app's `claude_desktop_config.json`:
 
-## 3. Step-by-Step Implementation
-
-We'll organize our code into `src/resources`, `src/tools`, and `src/prompts` directories, with an `index.ts` in each to handle registrations, plus the main server entry point `src/index.ts`.
-
-### Step 3.1: Defining the Resource (`src/resources/index.ts`)
-
-We need a way to store which CSS concepts the user knows. For this demo, we use a simple JSON file (`data/memory.json`) as our persistent storage.
-
-**`data/memory.json` (Initial State):**
-
-```json
-{
-  "user_id": "default_user",
-  "known_concepts": {}
-}
-```
-*(A default version of this file is included in the repository to ensure the server runs correctly out-of-the-box. Remember to keep `!data/memory.json` in your `.gitignore` if you modify it)*
-
-**`src/resources/index.ts`:**
-
-This file does several things:
-1.  Defines a Zod schema (`MemorySchema`) to validate the structure of `memory.json`.
-2.  Creates helper functions (`readMemory`, `writeMemory`) to safely read/write/validate the JSON file.
-3.  Registers the `css_knowledge_memory` resource with the MCP server using `server.resource`.
-
-```typescript
-// src/resources/index.ts (Key parts)
-import { server } from "../index.js";
-import { z } from "zod";
-import fs from 'fs/promises';
-import path from 'path';
-// ... other imports and path setup ...
-
-// Path to the JSON file
-const memoryFilePath = path.resolve(__dirname, '../../data/memory.json');
-
-// Zod schema for validation
-const MemorySchema = z.object({ /* ... schema definition ... */ });
-export type MemoryData = z.infer<typeof MemorySchema>;
-
-// Reads and validates data from memory.json
-export async function readMemory(): Promise<MemoryData> { /* ... fs.readFile, JSON.parse, MemorySchema.parse ... */ }
-
-// Validates and writes data to memory.json
-export async function writeMemory(newData: MemoryData): Promise<void> { /* ... MemorySchema.parse, JSON.stringify, fs.writeFile ... */ }
-
-// Registers the resource
-function registerCssKnowledgeMemoryResource() {
-    const resourceName = "css_knowledge_memory";
-    const resourceUriBase = `memory://${resourceName}/`; // Custom URI scheme
-
-    server.resource(
-        resourceName,
-        resourceUriBase,
-        { read: true, write: true }, // Permissions
-        async (uri: URL) => { // Read handler
-            // Demo always reads the same file, ignoring specific URI path
-            try {
-                const memoryData = await readMemory();
-                return { /* ... contents with JSON string ... */ };
-            } catch (error) { /* ... error handling ... */ }
+    ```json
+    {
+      "mcpServers": {
+        "css-tutor": {
+          "command": "node",
+          "args": [
+            "/full/path/to/your/css-mcp-server/build/index.js" // Use the ABSOLUTE path
+          ],
+          "env": {
+            // Provide the API key here if using Option B above
+            "OPENROUTER_API_KEY": "sk-or-xxxxxxxxxxxxxxxxxxxxxxxxxx"
+          }
         }
-    );
-}
-
-export function registerResources() {
-    registerCssKnowledgeMemoryResource();
-}
-```
-We use the `memory://` scheme as a conventional way to identify this internal server state.
-
-### Step 3.2: Defining the Tools (`src/tools/index.ts`)
-
-Tools define the actions the server can perform.
-
-**`src/tools/index.ts`:**
-
-This file registers our three tools:
-
-1.  **`read_from_memory`**:
-    *   Takes no input.
-    *   Calls the `readMemory` function from `src/resources/index.ts`.
-    *   Returns the memory data as a JSON string.
-
-    ```typescript
-    // Inside src/tools/index.ts
-    import { readMemory /* ... */ } from "../resources/index.js";
-
-    function registerReadFromMemoryTool() {
-        server.tool(
-            "read_from_memory",
-            "Reads the user's current CSS knowledge from memory.",
-            {}, // No input
-            async () => {
-                const memoryData = await readMemory();
-                return { content: [{ type: "text", text: JSON.stringify(memoryData, null, 2) }] };
-                // Error handling omitted for brevity
-            }
-        );
-    }
-    ```
-
-2.  **`write_to_memory`**:
-    *   Takes `concept` (string) and `known` (boolean) as input (defined using a Zod shape).
-    *   Calls `readMemory` to get the current state.
-    *   Updates the state in memory.
-    *   Calls `writeMemory` to save the changes back to `data/memory.json`.
-    *   Returns a success message.
-
-    ```typescript
-    // Inside src/tools/index.ts
-    import { readMemory, writeMemory, MemoryData } from "../resources/index.js";
-    import { z } from "zod";
-
-    function registerWriteToMemoryTool() {
-        const writeMemoryInputShape = {
-            concept: z.string().describe("..."),
-            known: z.boolean().describe("...")
-        };
-        server.tool(
-            "write_to_memory",
-            "Updates the user's CSS knowledge memory...",
-            writeMemoryInputShape, // Input schema definition
-            async (args) => {
-                const { concept, known } = args;
-                const currentMemory = await readMemory();
-                const updatedMemory: MemoryData = { /* ... update logic ... */ };
-                await writeMemory(updatedMemory);
-                return { content: [{ type: "text", text: `Memory updated...` }] };
-                // Error handling omitted for brevity
-            }
-        );
-    }
-    ```
-
-3.  **`get_latest_updates`**:
-    *   Takes no input.
-    *   Requires `OPENROUTER_API_KEY` from the environment (`.env` file).
-    *   Uses `node-fetch` to call the OpenRouter Chat Completions API (`https://openrouter.ai/api/v1/chat/completions`).
-    *   Specifies the `perplexity/sonar-small-online` model to get up-to-date web information.
-    *   Includes system and user messages to guide the Perplexity model.
-    *   Parses the response and returns the AI-generated summary of CSS updates.
-
-    ```typescript
-    // Inside src/tools/index.ts
-    import fetch from 'node-fetch';
-    import dotenv from 'dotenv';
-    dotenv.config();
-    const openRouterApiKey = process.env.OPENROUTER_API_KEY;
-
-    function registerGetLatestUpdatesTool() {
-        if (!openRouterApiKey) { /* ... handle missing key ... */ return; }
-        server.tool(
-            "get_latest_updates",
-            "Fetches recent news and updates about CSS features...",
-            {}, // No input
-            async () => {
-                const openRouterUrl = "...";
-                const headers = { /* ... Authorization header ... */ };
-                const body = JSON.stringify({
-                    model: "perplexity/sonar-small-online",
-                    messages: [ /* ... system and user prompts ... */ ]
-                });
-                const response = await fetch(openRouterUrl, { /* ... */ });
-                // Check response.ok, parse JSON, extract content
-                const data: any = await response.json();
-                const assistantMessage = data.choices?.[0]?.message?.content;
-                // Handle errors if extraction fails
-                return { content: [{ type: "text", text: assistantMessage }] };
-                // Error handling omitted for brevity
-            }
-        );
-    }
-    ```
-Finally, an exported `registerTools` function calls the registration function for each tool.
-
-### Step 3.3: Defining the Prompt (`src/prompts/index.ts`)
-
-The prompt guides the AI client. We store the prompt text directly in the code for simplicity.
-
-**`src/prompts/index.ts`:**
-
-```typescript
-import { server } from "../index.js";
-
-// Static prompt text providing guidance to the AI client.
-const cssTutorPromptText = `You are a helpful assistant connecting to a CSS knowledge server...
-// ... (Full prompt text here) ...
-`;
-
-// Registers the static guidance prompt with the MCP server.
-function registerCssTutorPrompt() {
-    server.prompt(
-        "css-tutor-guidance",
-        "Provides guidance on how to use the CSS tutor tools and resources.",
-        {}, // No input arguments
-        async () => ({ // Handler returns the static text
-            messages: [
-                { role: "assistant", content: { type: "text", text: cssTutorPromptText } }
-            ]
-        })
-    );
-}
-
-// Function called by src/index.ts to register all prompts for this server.
-export function registerPrompts() {
-    registerCssTutorPrompt();
-}
-```
-
-### Step 3.4: Wiring it Together (`src/index.ts`)
-
-This is the main entry point that initializes the server and connects everything.
-
-**`src/index.ts`:**
-
-```typescript
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { registerPrompts } from "./prompts/index.js";
-import { registerResources } from "./resources/index.js";
-import { registerTools } from "./tools/index.js";
-
-// Initialize the MCP Server instance
-export const server = new McpServer({
-    name: "css-tutor",
-    version: "0.0.1",
-    capabilities: { prompts: {}, resources: {}, tools: {} } // Placeholders
-});
-
-// Load and register all defined prompts, resources, and tools
-// This populates the capabilities declared above.
-registerPrompts();
-registerResources();
-registerTools();
-
-// Main entry point
-async function main(): Promise<void> {
-    // Use StdioServerTransport for communication over standard input/output
-    const transport = new StdioServerTransport();
-    // Connect the server logic to the transport
-    await server.connect(transport);
-}
-
-// Start the server
-main().catch((error: Error) => {
-    console.error("Server startup failed:", error);
-    process.exit(1);
-});
-```
-It imports the registration functions from the other `index.ts` files and calls them. It uses `StdioServerTransport`, meaning the client will communicate with this server via standard input/output when launched as a child process.
-
-## 4. Configuration (`.env`)
-
-The `get_latest_updates` tool requires an OpenRouter API key.
-
-1.  Copy the example file: `cp .env.example .env`
-2.  Edit the `.env` file and replace `YOUR_API_KEY_HERE` with your actual OpenRouter key:
-
-    ```dotenv
-    # .env
-    OPENROUTER_API_KEY=sk-or-xxxxxxxxxxxxxxxxxxxxxxxxxx
-    ```
-    The `.gitignore` file ensures your `.env` file (containing the secret key) is not accidentally committed to version control.
-
-## 5. Building and Running
-
-**Build:** Compile the TypeScript code to JavaScript:
-
-```bash
-npm run build # Or: yarn build / pnpm run build
-```
-This runs the `build` script defined in `package.json`, which executes `tsc` (the TypeScript compiler) and outputs the JavaScript files to the `build/` directory.
-
-**Run:** Running an MCP server usually involves having an MCP client launch it. How you configure your specific client will vary, but you typically need to tell it the command to execute. For example, using the Claude desktop app, you might configure its `claude_desktop_config.json` like this:
-
-```json
-{
-  "mcpServers": {
-    "css-tutor": {
-      "command": "node",
-      "args": [
-        "/full/path/to/your/css-mcp-server/build/index.js" // Use the absolute path
-      ],
-      "env": {
-        // The client can inject environment variables like the API key
-        "OPENROUTER_API_KEY": "sk-or-xxxxxxxxxxxxxxxxxxxxxxxxxx"
       }
     }
-  }
-}
-```
-*(Note: Providing the key via the client's `env` configuration is often preferred over relying solely on the `.env` file loaded by the server itself, especially in production scenarios.)*
+    ```
+    *(Ensure the path in `args` is the correct **absolute path** to the built `index.js` file on your system.)*
 
-Once configured, start the connection from your MCP client. The client will launch the `node build/index.js` process, and they will communicate over `stdio`. You can then interact with the CSS Tutor via your AI client!
+6.  **Connect:** Start the connection from your MCP client. The client will launch the server process, and you can start interacting!
 
-## 6. Debugging with MCP Inspector
+## Understanding the Code
+
+This section provides a higher-level overview of how the server is implemented.
+
+### MCP Concepts Used
+
+*   **Resource (`css_knowledge_memory`):** Represents the user's known CSS concepts, stored persistently in `data/memory.json`.
+*   **Tools:** Actions the server can perform:
+    *   `get_latest_updates`: Fetches CSS news from OpenRouter/Perplexity.
+    *   `read_from_memory`: Reads the content of the `css_knowledge_memory` resource.
+    *   `write_to_memory`: Modifies the `css_knowledge_memory` resource.
+*   **Prompt (`css-tutor-guidance`):** Static instructions guiding the AI client on how to interact with the tools and resource effectively.
+
+### Code Structure
+
+The code is organized as follows:
+
+*   **`data/memory.json`**: A simple JSON file acting as the database for known CSS concepts. A default version is included in the repo.
+*   **`src/resources/index.ts`**: Defines the `css_knowledge_memory` resource. It includes:
+    *   A Zod schema for validating the data.
+    *   `readMemory` and `writeMemory` functions for file I/O.
+    *   Registration using `server.resource`, specifying the `memory://` URI scheme and read/write permissions. The read handler returns the content of `data/memory.json`.
+*   **`src/tools/index.ts`**: Defines the three tools using `server.tool`:
+    *   `read_from_memory`: Calls `readMemory`.
+    *   `write_to_memory`: Takes `concept` and `known` as input (schema defined with Zod), uses `readMemory` and `writeMemory` to update the JSON file.
+    *   `get_latest_updates`: Requires `OPENROUTER_API_KEY`, calls the OpenRouter API using `node-fetch` and the `perplexity/sonar-small-online` model, returns the AI-generated summary.
+*   **`src/prompts/index.ts`**: Defines the static `css-tutor-guidance` prompt using `server.prompt`. The prompt text is embedded directly in the code.
+*   **`src/index.ts`**: The main server entry point.
+    *   Initializes the `McpServer` instance from `@modelcontextprotocol/sdk`.
+    *   Imports and calls the `registerPrompts`, `registerResources`, and `registerTools` functions from the other modules.
+    *   Uses `StdioServerTransport` to handle communication over standard input/output.
+    *   Connects the server to the transport and includes basic error handling.
+*   **`package.json`**: Defines dependencies (`@modelcontextprotocol/sdk`, `dotenv`, `node-fetch`, `zod`) and the `build` script (`tsc`).
+*   **`.env.example` / `.env`**: Used for storing the `OPENROUTER_API_KEY` (if using Option A for configuration).
+*   **`.gitignore`**: Configured to ignore `node_modules`, `build`, `.env`, and the contents of `data/` except for the default `data/memory.json`.
+*   **`tsconfig.json`**: Standard TypeScript configuration.
+
+## Debugging with MCP Inspector
 
 If you need to debug the server or inspect the raw JSON-RPC messages being exchanged, you can use the `@modelcontextprotocol/inspector` tool. This tool acts as a basic MCP client and launches your server, showing you the communication flow.
 
