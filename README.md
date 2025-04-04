@@ -41,11 +41,10 @@ Follow these steps to get the server running quickly:
         "css-tutor": {
           "command": "node",
           "args": [
-            "/full/path/to/your/css-mcp-server/build/index.js" // Use the ABSOLUTE path
+            "/full/path/to/your/css-mcp-server/build/index.js"
           ],
           "env": {
-            // The client MUST inject the environment variable for the server
-            "OPENROUTER_API_KEY": "sk-or-xxxxxxxxxxxxxxxxxxxxxxxxxx" // <-- Add your key here
+            "OPENROUTER_API_KEY": "sk-or-xxxxxxxxxxxxxxxxxxxxxxxxxx"
           }
         }
       }
