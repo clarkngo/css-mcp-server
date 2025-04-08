@@ -98,7 +98,7 @@ function registerGetLatestUpdatesTool() {
             // Request body for the OpenRouter Chat Completions API
             const body = JSON.stringify({
                 // Using a Perplexity model capable of accessing recent web info
-                model: "perplexity/sonar-small-online",
+                model: "perplexity/sonar-pro",
                 messages: [
                     // System message guides the AI's response behavior
                     { role: "system", content: "You are an AI assistant specialized in finding the latest CSS news and updates. Summarize the key recent developments concisely." },

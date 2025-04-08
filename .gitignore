@@ -3,6 +3,7 @@ node_modules
 build
 pnpm-lock.yaml
 ARTICLE_DRAFT.md
+ARTICLE_OUTLINE.md
 
 
 # Ignore contents of data/, but not the directory itself

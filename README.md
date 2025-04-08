@@ -116,7 +116,7 @@ The code is organized as follows:
 *   **`src/tools/index.ts`**: Defines the three tools using `server.tool`:
     *   `read_from_memory`: Calls `readMemory`.
     *   `write_to_memory`: Takes `concept` and `known` as input (schema defined with Zod), uses `readMemory` and `writeMemory` to update the JSON file.
-    *   `get_latest_updates`: Requires `OPENROUTER_API_KEY`, calls the OpenRouter API using `node-fetch` and the `perplexity/sonar-small-online` model, returns the AI-generated summary.
+    *   `get_latest_updates`: Requires `OPENROUTER_API_KEY`, calls the OpenRouter API using `node-fetch` and the `perplexity/sonar-pro` model, returns the AI-generated summary.
 *   **`src/prompts/index.ts`**: Defines the static `css-tutor-guidance` prompt using `server.prompt`. The prompt text is embedded directly in the code.
 *   **`src/index.ts`**: The main server entry point.
     *   Initializes the `McpServer` instance from `@modelcontextprotocol/sdk`.
