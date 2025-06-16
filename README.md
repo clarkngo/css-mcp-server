@@ -1,3 +1,9 @@
+# Quickstart
+1. `npm install`
+2. `npm run build`
+3. Edit `claude_desktop_config.json`
+
+
 # Building a CSS Tutor MCP Server
 
 This repo contains a simple Model Context Protocol (MCP) server built with Node.js and TypeScript. It acts as a "CSS Tutor," providing personalized updates about CSS features to a connected AI client.
